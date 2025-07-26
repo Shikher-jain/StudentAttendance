@@ -1,4 +1,3 @@
-
 import cv2
 import os
 
@@ -31,4 +30,3 @@ def capture_face(name):
 if __name__ == "__main__":
     username = input("Enter student name: ")
     capture_face(username)
-
