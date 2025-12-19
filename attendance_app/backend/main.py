@@ -17,6 +17,7 @@ import shutil
 import cv2
 import numpy as np
 import base64
+import face_recognition
 from datetime import datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -533,6 +534,47 @@ async def get_camera_status():
         "is_active": live_video_service.is_active,
         "active_sessions": len(active_sessions)
     }
+
+@app.get("/live/face/status")
+async def get_face_detection_status():
+    """
+    Check if face is currently detected in the camera frame.
+    Returns face detection status and count.
+    """
+    try:
+        if not live_video_service.is_active:
+            return {
+                "face_detected": False,
+                "face_count": 0,
+                "message": "Camera is not active"
+            }
+        
+        # Capture current frame
+        frame = live_video_service.read_frame()
+        if frame is None:
+            return {
+                "face_detected": False,
+                "face_count": 0,
+                "message": "No frame available"
+            }
+        
+        # Detect faces using face_service (recognize_from_camera returns face locations)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+        face_count = len(face_locations)
+        
+        return {
+            "face_detected": face_count > 0,
+            "face_count": face_count,
+            "message": "Face detected" if face_count == 1 else f"{face_count} faces detected" if face_count > 1 else "No face detected"
+        }
+    except Exception as e:
+        logger.error(f"Error checking face detection: {str(e)}")
+        return {
+            "face_detected": False,
+            "face_count": 0,
+            "message": f"Error: {str(e)}"
+        }
 
 @app.get("/live/video/stream")
 async def live_video_stream():

@@ -75,8 +75,17 @@ class LiveVideoService:
             return None
         
         ret, frame = self.camera.read()
-        if not ret:
+        if not ret or frame is None:
             logger.warning("Failed to read frame from camera")
+            return None
+        
+        # Ensure frame is in correct format (8-bit BGR)
+        if frame.dtype != np.uint8:
+            frame = frame.astype(np.uint8)
+        
+        # Ensure frame has 3 channels (BGR)
+        if len(frame.shape) != 3 or frame.shape[2] != 3:
+            logger.error(f"Invalid frame shape: {frame.shape}")
             return None
         
         return frame

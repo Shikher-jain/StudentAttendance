@@ -52,6 +52,18 @@ st.markdown("""
         border-left: 4px solid #28a745;
         border-radius: 4px;
     }
+    .video-frame-detected {
+        border: 5px solid #28a745;
+        border-radius: 8px;
+        padding: 5px;
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+    }
+    .video-frame-no-face {
+        border: 5px solid #dc3545;
+        border-radius: 8px;
+        padding: 5px;
+        box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -110,6 +122,18 @@ def stop_camera():
         return False, "Failed to stop camera"
     except Exception as e:
         return False, str(e)
+
+
+def check_face_detection():
+    """Check if face is currently detected in frame."""
+    try:
+        response = requests.get(f"{BACKEND_URL}/live/face/status", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("face_detected", False), data.get("face_count", 0)
+        return False, 0
+    except:
+        return False, 0
 
 
 # Check backend health
@@ -173,11 +197,28 @@ if choice == "Live Registration":
         
         st.write("")
         st.write("**Camera Preview**")
-        st.write("Position yourself in the camera frame below:")
         
-        # Video stream preview
+        # Check face detection status
+        face_detected, face_count = check_face_detection()
+        
+        if face_detected and face_count == 1:
+            st.success("✅ Face detected! Ready to capture.")
+            border_class = "video-frame-detected"
+        elif face_count > 1:
+            st.warning(f"⚠️ Multiple faces detected ({face_count}). Please ensure only one person is in frame.")
+            border_class = "video-frame-no-face"
+        else:
+            st.error("❌ No face detected. Position yourself in the camera frame.")
+            border_class = "video-frame-no-face"
+        
+        # Video stream preview with conditional border
         video_url = f"{BACKEND_URL}/live/video/stream"
-        st.markdown(f'<img src="{video_url}" width="100%">', unsafe_allow_html=True)
+        st.markdown(f'<div class="{border_class}"><img src="{video_url}" width="100%"></div>', unsafe_allow_html=True)
+        
+        # Auto-refresh checkbox for live feedback
+        if st.checkbox("🔄 Auto-refresh detection", value=True, key="auto_refresh_reg"):
+            time.sleep(1)
+            st.rerun()
     
     with col2:
         st.subheader("Capture & Register")

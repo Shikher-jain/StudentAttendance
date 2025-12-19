@@ -73,8 +73,16 @@ class FaceRecognitionService:
             if not Path(image_path).exists():
                 raise FileNotFoundError(f"Image file not found: {image_path}")
             
-            image = face_recognition.load_image_file(image_path)
-            face_encodings = face_recognition.face_encodings(image, model=self.model)
+            # Load image using OpenCV first (handles BGR correctly)
+            image_bgr = cv2.imread(image_path)
+            if image_bgr is None:
+                raise ValueError(f"Failed to load image: {image_path}")
+            
+            # Convert BGR to RGB for face_recognition library
+            image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            
+            # Encode faces
+            face_encodings = face_recognition.face_encodings(image_rgb, model=self.model)
             
             if not face_encodings:
                 logger.warning(f"No face detected in {image_path}")
@@ -176,6 +184,21 @@ class FaceRecognitionService:
             List of dictionaries with 'name', 'confidence', and 'location' for each face
         """
         try:
+            # Validate frame
+            if frame is None or frame.size == 0:
+                logger.error("Invalid frame: None or empty")
+                return []
+            
+            # Ensure frame is uint8
+            if frame.dtype != np.uint8:
+                logger.warning(f"Frame dtype is {frame.dtype}, converting to uint8")
+                frame = frame.astype(np.uint8)
+            
+            # Ensure frame has correct shape (height, width, 3)
+            if len(frame.shape) != 3 or frame.shape[2] != 3:
+                logger.error(f"Invalid frame shape: {frame.shape}, expected (H, W, 3)")
+                return []
+            
             # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
