@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import pickle
 import csv
+import os
 from datetime import datetime
 
 # face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
